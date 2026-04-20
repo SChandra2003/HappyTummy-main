@@ -37,8 +37,7 @@
                     {% endif %}
                 </div>
             </div>
-            <button id="themeToggleBtn"
-                style="margin-left:18px;background:#eee;border:none;padding:8px 18px;border-radius:22px;font-size:1rem;cursor:pointer;box-shadow:0 2px 8px rgba(44,62,80,0.06);color:#222;transition:background 0.2s;vertical-align:middle;">
+            <button id="themeToggleBtn" type="button" class="nav-theme-toggle">
                 <i class="fas fa-moon"></i> Dark Mode
             </button>
         </nav>
@@ -80,106 +79,4 @@
         }
     });
 </script>
-<style>
-    body.dark-mode {
-        background: #181a1b !important;
-        color: #e0e0e0 !important;
-    }
-    body.dark-mode .dashboard-wrapper,
-    body.dark-mode .card,
-    body.dark-mode .profile-card,
-    body.dark-mode .table-wrapper,
-    body.dark-mode .modal {
-        background: #23272a !important;
-        color: #e0e0e0 !important;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-    }
-    body.dark-mode .summary-card {
-        background: #23272a !important;
-        color: #e0e0e0 !important;
-    }
-    body.dark-mode th {
-        background: #23272a !important;
-        color: #bdbdbd !important;
-    }
-    body.dark-mode td {
-        color: #e0e0e0 !important;
-    }
-    body.dark-mode .btn-primary {
-        background: #388e3c !important;
-        color: #fff !important;
-    }
-    body.dark-mode .btn-secondary {
-        background: #333 !important;
-        color: #fff !important;
-    }
-    body.dark-mode .modal-backdrop {
-        background: rgba(20,20,20,0.7) !important;
-    }
-    body.dark-mode input,
-    body.dark-mode textarea,
-    body.dark-mode select {
-        background: #23272a !important;
-        color: #e0e0e0 !important;
-        border: 1px solid #444 !important;
-    }
-    body.dark-mode .status-pill.status-complete {
-        background: #2e7d32 !important;
-        color: #fff !important;
-    }
-    body.dark-mode .status-pill.status-pending {
-        background: #bfa800 !important;
-        color: #fff !important;
-    }
-    body.dark-mode .profile-avatar {
-        background: #23272a !important;
-        color: #81c784 !important;
-    }
-    body.dark-mode .modal {
-        background: #23272a !important;
-    }
-    body.dark-mode .modal-header h3 {
-        color: #81c784 !important;
-    }
-    body.dark-mode .modal-close {
-        color: #fff !important;
-    }
-    body.dark-mode .form-label {
-        color: #bdbdbd !important;
-    }
-    body.dark-mode .dashboard-wrapper h1,
-    body.dark-mode .dashboard-wrapper h2,
-    body.dark-mode .dashboard-wrapper h3 {
-        color: #81c784 !important;
-    }
 
-    /* Force inline light cards/sections in dashboards to switch in dark mode */
-    body.dark-mode div[style*="background: #fff"],
-    body.dark-mode div[style*="background:#fff"] {
-        background: #23272a !important;
-        color: #e0e0e0 !important;
-    }
-
-    body.dark-mode div[style*="color: #555"],
-    body.dark-mode div[style*="color:#555"],
-    body.dark-mode div[style*="color: #666"],
-    body.dark-mode div[style*="color:#666"],
-    body.dark-mode div[style*="color: #757575"],
-    body.dark-mode div[style*="color:#757575"],
-    body.dark-mode div[style*="color: #777"],
-    body.dark-mode div[style*="color:#777"],
-    body.dark-mode div[style*="color: #888"],
-    body.dark-mode div[style*="color:#888"] {
-        color: #cfd8dc !important;
-    }
-
-    body.dark-mode h1[style],
-    body.dark-mode h2[style],
-    body.dark-mode h3[style] {
-        color: #81c784 !important;
-    }
-
-    body.dark-mode .leaflet-control-container a {
-        color: #222 !important;
-    }
-</style>

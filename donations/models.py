@@ -148,7 +148,7 @@ class PickupTask(models.Model):
     otp_verified = models.BooleanField(default=False)
     delivered_to_ngo = models.BooleanField(default=False)
     completed = models.BooleanField(default=False)
-
+    completed_at = models.DateTimeField(null=True, blank=True)
     class Meta:
         ordering = ["-assigned_at"]
 

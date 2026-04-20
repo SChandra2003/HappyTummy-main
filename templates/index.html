@@ -8,9 +8,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#7BA46C" />
     <link rel="icon" href="{% static 'Assets/logo.png' %}" type="image/png" />
+       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link
         href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap"
         rel="stylesheet">
+
     <link rel="stylesheet" href="{% static 'css/style.css' %}" />
 </head>
 
@@ -217,7 +219,7 @@
             <p>For partnerships & general queries</p>
             <div class="contact-strip__links">
                 <a href="mailto:hello@happytummy.org" class="chip">hello@happytummy.org</a>
-                <a href="tel:+918777256706" class="chip">+91 87772 56706</a>
+                <a href="tel:+911234567890" class="chip">+91 1234567890</a>
             </div>
         </div>
     </section>
@@ -238,12 +240,14 @@
                 </ul>
             </div>
             <div>
-                <h4>Social</h4>
-                <div class="socials">
-                    <a aria-label="Instagram" href="#" class="social">IG</a>
-                    <a aria-label="Facebook" href="#" class="social">FB</a>
-                    <a aria-label="LinkedIn" href="#" class="social">IN</a>
-                </div>
+                     <i class="fab fa-instagram"></i>
+                    </a>
+                    <a aria-label="Facebook" href="#" class="social social--facebook">
+                        <i class="fab fa-facebook-f"></i>
+                    </a>
+                    <a aria-label="LinkedIn" href="#" class="social social--linkedin">
+                        <i class="fab fa-linkedin-in"></i>
+                    </a>
             </div>
         </div>
         <div class="container footer__note">
@@ -251,9 +255,7 @@
         </div>
     </footer>
 
-    <button id="themeToggleBtn" style="margin-left:18px;background:#eee;border:none;padding:8px 18px;border-radius:22px;font-size:1rem;cursor:pointer;box-shadow:0 2px 8px rgba(44,62,80,0.06);color:#222;transition:background 0.2s;vertical-align:middle;">
-        <i class="fas fa-moon"></i> Dark Mode
-    </button>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const themeBtn = document.getElementById('themeToggleBtn');
@@ -281,79 +283,7 @@
             }
         });
     </script>
-    <style>
-        body.dark-mode {
-            background: #181a1b !important;
-            color: #e0e0e0 !important;
-        }
-        body.dark-mode .dashboard-wrapper,
-        body.dark-mode .card,
-        body.dark-mode .profile-card,
-        body.dark-mode .table-wrapper,
-        body.dark-mode .modal {
-            background: #23272a !important;
-            color: #e0e0e0 !important;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-        }
-        body.dark-mode .summary-card {
-            background: #23272a !important;
-            color: #e0e0e0 !important;
-        }
-        body.dark-mode th {
-            background: #23272a !important;
-            color: #bdbdbd !important;
-        }
-        body.dark-mode td {
-            color: #e0e0e0 !important;
-        }
-        body.dark-mode .btn-primary {
-            background: #388e3c !important;
-            color: #fff !important;
-        }
-        body.dark-mode .btn-secondary {
-            background: #333 !important;
-            color: #fff !important;
-        }
-        body.dark-mode .modal-backdrop {
-            background: rgba(20,20,20,0.7) !important;
-        }
-        body.dark-mode input,
-        body.dark-mode textarea,
-        body.dark-mode select {
-            background: #23272a !important;
-            color: #e0e0e0 !important;
-            border: 1px solid #444 !important;
-        }
-        body.dark-mode .status-pill.status-complete {
-            background: #2e7d32 !important;
-            color: #fff !important;
-        }
-        body.dark-mode .status-pill.status-pending {
-            background: #bfa800 !important;
-            color: #fff !important;
-        }
-        body.dark-mode .profile-avatar {
-            background: #23272a !important;
-            color: #81c784 !important;
-        }
-        body.dark-mode .modal {
-            background: #23272a !important;
-        }
-        body.dark-mode .modal-header h3 {
-            color: #81c784 !important;
-        }
-        body.dark-mode .modal-close {
-            color: #fff !important;
-        }
-        body.dark-mode .form-label {
-            color: #bdbdbd !important;
-        }
-        body.dark-mode .dashboard-wrapper h1,
-        body.dark-mode .dashboard-wrapper h2,
-        body.dark-mode .dashboard-wrapper h3 {
-            color: #81c784 !important;
-        }
-    </style>
+    
     <script src="{% static 'js/script.js' %}"></script>
 </body>
 

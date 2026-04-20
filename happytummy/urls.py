@@ -23,11 +23,17 @@ urlpatterns = [
     path("logout/", auth_views.logout_view, name="logout"),
     path("dashboard/", auth_views.dashboard_redirect, name="dashboard_redirect"),
     path("dashboard/restaurant/", dashboard_views.restaurant_dashboard, name="restaurant_dashboard"),
+    path(
+        "dashboard/restaurant/csr-certificate/",
+        dashboard_views.restaurant_csr_certificate,
+        name="restaurant_csr_certificate",
+    ),
     path("dashboard/volunteer/", dashboard_views.volunteer_dashboard, name="volunteer_dashboard"),
     path("dashboard/ngo/", dashboard_views.ngo_dashboard, name="ngo_dashboard"),
     path("api/volunteer/location/update/", dashboard_views.volunteer_location_update, name="volunteer_location_update"),
     path("api/ngo/live-volunteers/", dashboard_views.ngo_live_volunteer_locations, name="ngo_live_volunteer_locations"),
     path("donations/", include("donations.urls")),
+      path("dashboard/volunteer/certificate/", dashboard_views.volunteer_monthly_certificate, name="volunteer_monthly_certificate"),
 ]
 
 # Serve media files in development

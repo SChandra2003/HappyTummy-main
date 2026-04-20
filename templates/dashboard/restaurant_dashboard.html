@@ -551,6 +551,33 @@
                         <div style="font-size: 1.1rem; color: #757575;">Completed Pickups</div>
                         <div style="font-size: 2.1rem; font-weight: 700; color: #388E3C;">{{ completed_pickups }}</div>
                     </div>
+                </div>               <div style="background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(44,62,80,0.06); padding: 26px 22px; margin-bottom: 30px; border-left: 5px solid #4CAF50;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;">
+                        <div>
+                            <h2 style="margin:0 0 8px;font-size:1.25rem;color:#2E7D32;">
+                                <i class="fas fa-award"></i> CSR Recognition Certificate
+                            </h2>
+                            {% if csr_certificate_eligible %}
+                                <p style="margin:0;color:#2f4f2f;">
+                                    Congratulations! Your restaurant has completed <strong>{{ csr_completed_donations }}</strong> successful deliveries and qualifies for CSR recognition.
+                                </p>
+                            {% else %}
+                                <p style="margin:0;color:#5f6d54;">
+                                    Complete <strong>{{ donations_remaining_for_certificate }}</strong> more delivered donation{{ donations_remaining_for_certificate|pluralize }} to unlock your certificate (minimum {{ csr_certificate_threshold }} completed deliveries).
+                                </p>
+                            {% endif %}
+                        </div>
+                        {% if csr_certificate_eligible %}
+                            <a href="{% url 'restaurant_csr_certificate' %}" class="btn btn-primary" style="padding:10px 20px;">
+                                <i class="fas fa-file-download"></i> View Certificate
+                            </a>
+                        {% else %}
+                            <button type="button" class="btn btn-secondary" style="padding:10px 20px;" disabled>
+                                <i class="fas fa-lock"></i> Locked
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
                     <div style="flex: 2 1 340px; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(44,62,80,0.06); padding: 28px 22px;">

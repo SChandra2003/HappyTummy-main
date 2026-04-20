@@ -16,9 +16,8 @@
         .summary-card .icon { font-size: 2.2rem; margin-bottom: 8px; }
         .summary-card .label { font-size: 1.1rem; color: #757575; }
         .summary-card .value { font-size: 2.1rem; font-weight: 700; color: #2E7D32; }
-        .profile-row { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; margin-bottom: 36px; }
-        .profile-card { flex: 2 1 340px; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(44,62,80,0.06); padding: 28px 22px; }
-        .profile-header { display: flex; align-items: center; gap: 18px; margin-bottom: 12px; }
+        .profile-row { margin-bottom: 28px; }
+        .profile-card { max-width: 560px; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(44,62,80,0.06); padding: 28px 22px; }.profile-header { display: flex; align-items: center; gap: 18px; margin-bottom: 12px; }
         .profile-avatar { width: 54px; height: 54px; border-radius: 50%; background: #E8F5E9; display: flex; align-items: center; justify-content: center; font-size: 1.7rem; color: #2E7D32; font-weight: 700; }
         .profile-header-info { display: flex; flex-direction: column; }
         .profile-header-info .name { font-size: 1.1rem; font-weight: 600; color: #2E7D32; }
@@ -34,8 +33,20 @@
         .status-complete { background: #d4edda; color: #155724; }
         .status-danger { background: #fdecea; color: #b71c1c; }
         .status-neutral { background: #eceff1; color: #455a64; }
-        @media (max-width: 900px) { .profile-row { flex-direction: column; } }
-
+       .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .compact-table table { min-width: 100%; }
+        .compact-table th, .compact-table td { white-space: normal; }
+        @media (max-width: 900px) {
+            .dashboard-wrapper { padding: 24px 12px 40px; }
+            .summary-row { gap: 14px; }
+            .summary-card { flex: 1 1 180px; }
+            table { min-width: 0; }
+        }
         /* Dark mode styles */
         body.dark-mode {
             background: #181a1b !important;
@@ -167,12 +178,54 @@
                 <div class="label">Pending Tasks</div>
                 <div class="value">{{ pending_count }}</div>
             </div>
+              <div class="summary-card">
+                <div class="icon" style="color:#1976D2;"><i class="fas fa-route"></i></div>
+                <div class="label">NGOs Served</div>
+                <div class="value">{{ ngo_frequency_count }}</div>
+            </div>
             <div class="summary-card">
-                <div class="icon" style="color:#388E3C;"><i class="fas fa-check-circle"></i></div>
-                <div class="label">Completed Tasks</div>
-                <div class="value">{{ completed_count }}</div>
+                <div class="icon" style="color:#6A1B9A;"><i class="fas fa-store"></i></div>
+                <div class="label">Pickup Restaurants</div>
+                <div class="value">{{ restaurant_frequency_count }}</div>
             </div>
         </div>
+        <div class="card" style="margin-bottom:24px;">
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:14px;">
+                <div>
+                    <h2 style="margin:0 0 6px;color:#2E7D32;font-size:1.3rem;">
+                        <i class="fas fa-award"></i> Monthly Certificate Progress ({{ monthly_label }})
+                    </h2>
+                    <p style="margin:0;color:#5f6d54;">
+                        Complete <strong>{{ monthly_target }}</strong> deliveries this month to unlock your volunteer certificate.
+                    </p>
+                </div>
+                {% if monthly_certificate_earned %}
+                <span class="status-pill status-complete" style="font-size:13px;padding:7px 12px;">
+                    <i class="fas fa-certificate"></i> Certificate Unlocked
+                </span>
+                {% else %}
+                <span class="status-pill status-pending" style="font-size:13px;padding:7px 12px;">
+                    <i class="fas fa-hourglass-half"></i> {{ monthly_deliveries_left }} more to unlock
+                </span>
+                {% endif %}
+            </div>
+            <div style="margin-top:14px;">
+                <div style="height:12px;background:#edf2ee;border-radius:999px;overflow:hidden;">
+                    <div style="height:100%;width:{{ monthly_progress_percent }}%;background:#4CAF50;border-radius:999px;"></div>
+                </div>
+                <div style="margin-top:8px;font-size:0.95rem;color:#444;">
+                    {{ monthly_completed_count }} / {{ monthly_target }} deliveries completed.
+                </div>
+                {% if monthly_certificate_earned %}
+                <div style="margin-top:12px;">
+                    <a href="{% url 'volunteer_monthly_certificate' %}" class="btn btn--primary" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;">
+                        <i class="fas fa-file-certificate"></i> View Certificate
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+       
         <div id="liveLocationStatus" style="background:#e8f5e9;color:#1b5e20;border-radius:10px;padding:10px 14px;margin:0 0 18px 0;font-size:0.95rem;">
             Live location updates are enabled while you have active deliveries.
         </div>
@@ -259,6 +312,59 @@
                 </tbody>
             </table>
         </div>
+         <h2 class="section-title" style="font-size:1.3rem;color:#2E7D32;margin:10px 0 18px;font-family:'Playfair Display',serif;">
+            <i class="fas fa-chart-bar"></i> Delivery Frequency Statistics
+        </h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:28px;">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>NGO</th>
+                            <th>Completed Deliveries</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ngo in ngo_frequency %}
+                        <tr>
+                            <td>{{ ngo.name }}</td>
+                            <td>{{ ngo.count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" style="text-align:center; padding: 18px; color:#777;">
+                                No NGO delivery stats yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Restaurant</th>
+                            <th>Completed Pickups</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for restaurant in restaurant_frequency %}
+                        <tr>
+                            <td>{{ restaurant.name }}</td>
+                            <td>{{ restaurant.count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" style="text-align:center; padding: 18px; color:#777;">
+                                No restaurant pickup stats yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <h2 class="section-title" style="font-size:1.3rem;color:#2E7D32;margin:32px 0 18px;font-family:'Playfair Display',serif;">
             <i class="fas fa-tasks"></i> Assigned Pickup Tasks
@@ -284,15 +390,15 @@
                             <td>{{ task.request.food_type }}</td>
                             <td>{{ task.request.quantity }} meals</td>
                             <td>{{ task.request.restaurant.business_name }}</td>
-                            <td>{{ task.request.restaurant.address }}</td>
-                            <td>-</td>
+                             <td>{{ task.source_address_display }}</td>
+                            <td>{{ task.destination_address_display }}</td>
                             <td>{{ task.assigned_at|date:"M d, Y — h:i A" }}</td>
                         {% else %}
                             <td>{{ task.ngo_request.food_type }}</td>
                             <td>{{ task.ngo_request.quantity }} meals</td>
                             <td>{% if task.ngo_request.accepted_by %}{{ task.ngo_request.accepted_by.business_name }}{% else %}-{% endif %}</td>
-                            <td>{% if task.ngo_request.accepted_by %}{{ task.ngo_request.accepted_by.address }}{% else %}-{% endif %}</td>
-                            <td>{{ task.ngo_request.ngo.address }}</td>
+                            <td>{{ task.source_address_display }}</td>
+                            <td>{{ task.destination_address_display }}</td>
                             <td>{{ task.assigned_at|date:"M d, Y — h:i A" }}</td>
                         {% endif %}
                         <td>

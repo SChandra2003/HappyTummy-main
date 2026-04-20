@@ -20,8 +20,10 @@ from django.conf import settings
 from django.utils.dateparse import parse_datetime
 import json
 import random
+from collections import OrderedDict
 
-
+CSR_CERTIFICATE_THRESHOLD = getattr(settings, "CSR_CERTIFICATE_THRESHOLD", 10)
+VOLUNTEER_MONTHLY_CERTIFICATE_TARGET = 10
 def _generate_delivery_otp():
     return f"{random.randint(0, 999999):06d}"
 
@@ -290,7 +292,18 @@ def restaurant_dashboard(request):
         completed=True,
     ).count()
     pending_pickups = total_donations - completed_pickups
-
+    now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_completed_pickups = PickupTask.objects.filter(
+        request__restaurant=profile,
+        request__isnull=False,
+        completed=True,
+    ).filter(
+        models.Q(completed_at__gte=month_start)
+        | models.Q(completed_at__isnull=True, assigned_at__gte=month_start)
+    ).count()
+    csr_certificate_eligible = monthly_completed_pickups >= CSR_CERTIFICATE_THRESHOLD
+    donations_remaining_for_certificate = max(CSR_CERTIFICATE_THRESHOLD - monthly_completed_pickups, 0)
     # Show NGO food requests in the same city (including ones accepted by this restaurant)
     nearby_ngo_requests = NGOFoodRequest.objects.filter(
         ngo__city__iexact=profile.city
@@ -310,7 +323,53 @@ def restaurant_dashboard(request):
         "lat": lat,
         "lng": lng,
         "nearby_ngo_requests": nearby_ngo_requests,
+        "csr_certificate_threshold": CSR_CERTIFICATE_THRESHOLD,
+        "csr_certificate_eligible": csr_certificate_eligible,
+        "donations_remaining_for_certificate": donations_remaining_for_certificate,
+        "csr_completed_donations": monthly_completed_pickups,
+        "csr_month_label": now.strftime("%B %Y"),
     })
+@login_required(login_url="/")
+def restaurant_csr_certificate(request):
+    try:
+        profile = RestaurantProfile.objects.get(user=request.user)
+    except RestaurantProfile.DoesNotExist:
+        messages.error(request, "No restaurant profile found for this account.")
+        return redirect("restaurant_dashboard")
+
+    now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    completed_donations = PickupTask.objects.filter(
+        request__restaurant=profile,
+        request__isnull=False,
+        completed=True,
+    ).filter(
+        models.Q(completed_at__gte=month_start)
+        | models.Q(completed_at__isnull=True, assigned_at__gte=month_start)
+    ).count()
+    if completed_donations < CSR_CERTIFICATE_THRESHOLD:
+        messages.warning(
+            request,
+            f"You need at least {CSR_CERTIFICATE_THRESHOLD} completed donations to unlock the CSR certificate.",
+        )
+        return redirect("restaurant_dashboard")
+
+    issued_on = timezone.now()
+    certificate_id = f"CSR-{issued_on.strftime('%Y%m%d')}-{profile.id:04d}"
+
+    return render(
+        request,
+        "dashboard/csr_certificate.html",
+        {
+            "profile": profile,
+            "completed_donations": completed_donations,
+            "csr_certificate_threshold": CSR_CERTIFICATE_THRESHOLD,
+            "issued_on": issued_on,
+            "certificate_id": certificate_id,
+            "csr_month_label": now.strftime("%B %Y"),
+        },
+    )
+
 
 # ---------------------------
 # VOLUNTEER DASHBOARD
@@ -364,15 +423,34 @@ def volunteer_dashboard(request):
                 page_message = "That pickup task is no longer available."
                 page_message_type = "error"
 
-    my_tasks = (
+    my_tasks_qs = (
         PickupTask.objects
         .filter(assigned_to=profile)
         .select_related("request__restaurant", "ngo_request__ngo", "ngo_request__accepted_by")
         .order_by("-assigned_at")
     )
-    pending_count = my_tasks.filter(completed=False).count()
-    completed_count = my_tasks.filter(completed=True).count()
-
+    pending_count = my_tasks_qs.filter(completed=False).count()
+    completed_count = my_tasks_qs.filter(completed=True).count()
+    now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_completed_count = my_tasks_qs.filter(
+        completed=True,
+        assigned_at__gte=month_start,
+    ).count()
+    monthly_target = VOLUNTEER_MONTHLY_CERTIFICATE_TARGET
+    monthly_progress_percent = min(int((monthly_completed_count / monthly_target) * 100), 100) if monthly_target else 100
+    monthly_deliveries_left = max(monthly_target - monthly_completed_count, 0)
+    monthly_certificate_earned = monthly_completed_count >= monthly_target
+    now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_completed_count = my_tasks_qs.filter(
+        completed=True,
+        assigned_at__gte=month_start,
+    ).count()
+    monthly_target = VOLUNTEER_MONTHLY_CERTIFICATE_TARGET
+    monthly_progress_percent = min(int((monthly_completed_count / monthly_target) * 100), 100) if monthly_target else 100
+    monthly_deliveries_left = max(monthly_target - monthly_completed_count, 0)
+    monthly_certificate_earned = monthly_completed_count >= monthly_target
     volunteer_city = profile.area.split(",")[-1].strip() if "," in profile.area else profile.area.strip()
 
     available_pickups = (
@@ -399,7 +477,49 @@ def volunteer_dashboard(request):
         if pickup.request:
             _decorate_safety(pickup.request)
 
-    has_active_task = my_tasks.filter(completed=False).exists()
+    my_tasks = list(my_tasks_qs)
+    ngo_frequency_map = OrderedDict()
+    restaurant_frequency_map = OrderedDict()
+    for task in my_tasks:
+        if task.request:
+            source_address = task.request.restaurant.address
+            destination_address = f"NGO drop-off in {task.request.restaurant.city}"
+            restaurant_name = task.request.restaurant.business_name
+            ngo_name = f"NGO in {task.request.restaurant.city}"
+        elif task.ngo_request:
+            source_address = task.ngo_request.accepted_by.address if task.ngo_request.accepted_by else "-"
+            destination_address = task.ngo_request.ngo.address if task.ngo_request.ngo else "-"
+            restaurant_name = task.ngo_request.accepted_by.business_name if task.ngo_request.accepted_by else "Unassigned Restaurant"
+            ngo_name = task.ngo_request.ngo.name if task.ngo_request.ngo else "Unknown NGO"
+        else:
+            source_address = "-"
+            destination_address = "-"
+            restaurant_name = "Unknown Restaurant"
+            ngo_name = "Unknown NGO"
+
+        task.source_address_display = source_address
+        task.destination_address_display = destination_address
+
+        if not task.completed:
+            continue
+
+        if restaurant_name not in restaurant_frequency_map:
+            restaurant_frequency_map[restaurant_name] = {"name": restaurant_name, "count": 0}
+        restaurant_frequency_map[restaurant_name]["count"] += 1
+
+        if ngo_name not in ngo_frequency_map:
+            ngo_frequency_map[ngo_name] = {"name": ngo_name, "count": 0}
+        ngo_frequency_map[ngo_name]["count"] += 1
+
+    restaurant_frequency = sorted(
+        restaurant_frequency_map.values(),
+        key=lambda row: (-row["count"], row["name"].lower()),
+    )
+    ngo_frequency = sorted(
+        ngo_frequency_map.values(),
+        key=lambda row: (-row["count"], row["name"].lower()),
+    )
+    has_active_task = pending_count > 0
 
     return render(request, "dashboard/volunteer_dashboard.html", {
         "profile": profile,
@@ -411,9 +531,46 @@ def volunteer_dashboard(request):
         "has_active_task": has_active_task,
         "page_message": page_message,
         "page_message_type": page_message_type,
+         "monthly_completed_count": monthly_completed_count,
+        "monthly_target": monthly_target,
+        "monthly_progress_percent": monthly_progress_percent,
+        "monthly_deliveries_left": monthly_deliveries_left,
+        "monthly_certificate_earned": monthly_certificate_earned,
+        "monthly_label": now.strftime("%B %Y"),
+        "ngo_frequency": ngo_frequency,
+        "restaurant_frequency": restaurant_frequency,
+        "ngo_frequency_count": len(ngo_frequency),
+        "restaurant_frequency_count": len(restaurant_frequency),
     })
 
 
+@login_required(login_url="/")
+def volunteer_monthly_certificate(request):
+    profile = VolunteerProfile.objects.get(user=request.user)
+    now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_completed_count = PickupTask.objects.filter(
+        assigned_to=profile,
+        completed=True,
+        assigned_at__gte=month_start,
+    ).count()
+    monthly_target = VOLUNTEER_MONTHLY_CERTIFICATE_TARGET
+    monthly_certificate_earned = monthly_completed_count >= monthly_target
+
+    if not monthly_certificate_earned:
+        messages.warning(
+            request,
+            f"Complete {max(monthly_target - monthly_completed_count, 0)} more delivery(ies) this month to unlock your certificate.",
+        )
+        return redirect("volunteer_dashboard")
+
+    return render(request, "dashboard/volunteer_certificate.html", {
+        "profile": profile,
+        "monthly_label": now.strftime("%B %Y"),
+        "monthly_completed_count": monthly_completed_count,
+        "monthly_target": monthly_target,
+        "issued_on": now,
+    })
 # ---------------------------
 # NGO DASHBOARD
 # ---------------------------
@@ -501,7 +658,8 @@ def ngo_dashboard(request):
                     raise PickupTask.DoesNotExist
 
                 pickup.completed = True
-                pickup.save(update_fields=["completed"])
+                pickup.completed_at = timezone.now()
+                pickup.save(update_fields=["completed", "completed_at"])
 
                 if pickup.ngo_request:
                     pickup.ngo_request.fulfilled = True

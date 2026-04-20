@@ -10,14 +10,14 @@ from django.urls import reverse
 from django.utils import timezone
 
 from happytummy.middleware import get_server_boot_time
-from donations.models import NGOProfile, RestaurantProfile, SurplusFoodRequest, UserRole
+from donations.models import NGOProfile, PickupTask, RestaurantProfile, SurplusFoodRequest, UserRole
 from donations.services import (
     _normalize_msg91_mobile,
     build_surplus_sms_variables,
     get_nearby_ngos_for_surplus,
     send_sms,
 )
-
+from donations.dashboard_views import CSR_CERTIFICATE_THRESHOLD
 
 class SurplusSmsNotificationTests(TestCase):
     def setUp(self):
@@ -224,3 +224,104 @@ class SurplusSmsNotificationTests(TestCase):
     def test_send_test_sms_command_fails_when_provider_not_usable(self):
         with self.assertRaises(CommandError):
             call_command("send_test_sms", "+919000000002")
+     def test_restaurant_dashboard_shows_csr_certificate_progress(self):
+        self.client.force_login(self.restaurant_user)
+        session = self.client.session
+        session["server_boot"] = get_server_boot_time()
+        session.save()
+
+        donation = SurplusFoodRequest.objects.create(
+            restaurant=self.restaurant,
+            food_type="Rice",
+            quantity=15,
+        )
+        PickupTask.objects.create(request=donation, completed=True, completed_at=timezone.now())
+        response = self.client.get(reverse("restaurant_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["csr_certificate_eligible"])
+        self.assertEqual(
+            response.context["donations_remaining_for_certificate"],
+            CSR_CERTIFICATE_THRESHOLD - 1,
+        )
+
+    def test_restaurant_certificate_view_redirects_when_threshold_not_met(self):
+        self.client.force_login(self.restaurant_user)
+        session = self.client.session
+        session["server_boot"] = get_server_boot_time()
+        session.save()
+
+        response = self.client.get(reverse("restaurant_csr_certificate"), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.request["PATH_INFO"], reverse("restaurant_dashboard"))
+
+    def test_restaurant_certificate_view_renders_when_threshold_met(self):
+        self.client.force_login(self.restaurant_user)
+        session = self.client.session
+        session["server_boot"] = get_server_boot_time()
+        session.save()
+
+        for index in range(CSR_CERTIFICATE_THRESHOLD):
+            donation = SurplusFoodRequest.objects.create(
+                restaurant=self.restaurant,
+                food_type=f"Meal {index}",
+                quantity=10 + index,
+            )
+            PickupTask.objects.create(request=donation, completed=True, completed_at=timezone.now())
+
+        response = self.client.get(reverse("restaurant_csr_certificate"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.restaurant.business_name)
+        self.assertContains(response, "Certificate of CSR Recognition")
+
+    def test_posted_donations_without_completed_delivery_do_not_unlock_certificate(self):
+        self.client.force_login(self.restaurant_user)
+        session = self.client.session
+        session["server_boot"] = get_server_boot_time()
+        session.save()
+
+        for index in range(CSR_CERTIFICATE_THRESHOLD + 2):
+            SurplusFoodRequest.objects.create(
+                restaurant=self.restaurant,
+                food_type=f"Posted {index}",
+                quantity=5,
+            )
+
+        response = self.client.get(reverse("restaurant_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["csr_certificate_eligible"])
+        self.assertEqual(
+            response.context["donations_remaining_for_certificate"],
+            CSR_CERTIFICATE_THRESHOLD,
+        )
+
+    def test_previous_month_completions_do_not_count_for_monthly_certificate(self):
+        self.client.force_login(self.restaurant_user)
+        session = self.client.session
+        session["server_boot"] = get_server_boot_time()
+        session.save()
+
+        previous_month_time = timezone.now() - timedelta(days=35)
+        for index in range(CSR_CERTIFICATE_THRESHOLD):
+            donation = SurplusFoodRequest.objects.create(
+                restaurant=self.restaurant,
+                food_type=f"Old Month {index}",
+                quantity=9,
+            )
+            PickupTask.objects.create(
+                request=donation,
+                completed=True,
+                completed_at=previous_month_time,
+            )
+
+        response = self.client.get(reverse("restaurant_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["csr_certificate_eligible"])
+        self.assertEqual(
+            response.context["donations_remaining_for_certificate"],
+            CSR_CERTIFICATE_THRESHOLD,
+        )
